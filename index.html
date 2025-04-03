@@ -1,0 +1,571 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusFlow - Pomodoro Timer</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a;
+      color: #f8fafc;
+    }
+
+    .progress-ring__circle {
+      transition: stroke-dashoffset 0.5s;
+      transform: rotate(-90deg);
+      transform-origin: 50% 50%;
+    }
+
+    .blur-effect {
+      backdrop-filter: blur(10px);
+      background-color: rgba(15, 23, 42, 0.7);
+    }
+
+    .music-card:hover .play-overlay {
+      opacity: 1;
+    }
+  </style>
+</head>
+
+<body class="min-h-screen">
+  <div class="container mx-auto px-4 py-8 max-w-6xl">
+    <!-- Header with Auth -->
+    <header class="flex justify-between items-center mb-12">
+      <div class="flex items-center space-x-2">
+        <div class="w-10 h-10 rounded-full bg-indigo-500 flex items-center justify-center">
+          <i class="fas fa-clock text-white"></i>
+        </div>
+        <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-500 bg-clip-text text-transparent">
+          FocusFlow</h1>
+      </div>
+
+      <div id="auth-section">
+        <button id="login-btn"
+          class="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-full transition">
+          <i class="fab fa-google"></i>
+          <span>Sign in with Google</span>
+        </button>
+
+        <div id="user-profile" class="hidden items-center space-x-3">
+          <img id="user-avatar" src="" alt="User" class="w-10 h-10 rounded-full">
+          <span id="user-name" class="font-medium"></span>
+          <button id="logout-btn" class="text-slate-400 hover:text-white">
+            <i class="fas fa-sign-out-alt"></i>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+      <!-- Timer Section -->
+      <div class="lg:col-span-2 space-y-8">
+        <!-- Timer Display -->
+        <div class="flex flex-col items-center">
+          <div class="relative w-64 h-64 mb-8">
+            <svg class="w-full h-full" viewBox="0 0 100 100">
+              <circle cx="50" cy="50" r="45" fill="none" stroke="#1e293b" stroke-width="8" />
+              <circle id="progress-circle" class="progress-ring__circle" cx="50" cy="50" r="45" fill="none"
+                stroke="#6366f1" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="0" />
+            </svg>
+            <div class="absolute inset-0 flex items-center justify-center flex-col">
+              <div id="time-display" class="text-5xl font-bold mb-2">25:00</div>
+              <div id="timer-state" class="text-indigo-300 font-medium">Ready to focus</div>
+            </div>
+          </div>
+
+          <!-- Timer Controls -->
+          <div class="flex space-x-4 mb-8">
+            <button id="start-btn"
+              class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-medium transition">
+              <i class="fas fa-play mr-2"></i> Start
+            </button>
+            <button id="pause-btn"
+              class="hidden bg-slate-700 hover:bg-slate-600 text-white px-6 py-3 rounded-full font-medium transition">
+              <i class="fas fa-pause mr-2"></i> Pause
+            </button>
+            <button id="reset-btn"
+              class="bg-slate-800 hover:bg-slate-700 text-white px-6 py-3 rounded-full font-medium transition">
+              <i class="fas fa-redo mr-2"></i> Reset
+            </button>
+          </div>
+
+          <!-- Timer Settings -->
+          <div class="bg-slate-800 rounded-xl p-6 w-full max-w-md">
+            <h3 class="text-lg font-semibold mb-4">Timer Settings</h3>
+            <div class="grid grid-cols-3 gap-4">
+              <div>
+                <label class="block text-sm text-slate-400 mb-1">Focus</label>
+                <div class="flex items-center border border-slate-700 rounded-lg overflow-hidden">
+                  <button class="timer-decrement px-3 py-2 bg-slate-700 hover:bg-slate-600" data-type="focus">
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <input type="number" id="focus-time" value="25" min="5" max="60"
+                    class="w-12 text-center bg-slate-800 py-2 focus:outline-none">
+                  <button class="timer-increment px-3 py-2 bg-slate-700 hover:bg-slate-600" data-type="focus">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm text-slate-400 mb-1">Short Break</label>
+                <div class="flex items-center border border-slate-700 rounded-lg overflow-hidden">
+                  <button class="timer-decrement px-3 py-2 bg-slate-700 hover:bg-slate-600" data-type="shortBreak">
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <input type="number" id="short-break-time" value="5" min="1" max="15"
+                    class="w-12 text-center bg-slate-800 py-2 focus:outline-none">
+                  <button class="timer-increment px-3 py-2 bg-slate-700 hover:bg-slate-600" data-type="shortBreak">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+              <div>
+                <label class="block text-sm text-slate-400 mb-1">Long Break</label>
+                <div class="flex items-center border border-slate-700 rounded-lg overflow-hidden">
+                  <button class="timer-decrement px-3 py-2 bg-slate-700 hover:bg-slate-600" data-type="longBreak">
+                    <i class="fas fa-minus"></i>
+                  </button>
+                  <input type="number" id="long-break-time" value="15" min="10" max="30"
+                    class="w-12 text-center bg-slate-800 py-2 focus:outline-none">
+                  <button class="timer-increment px-3 py-2 bg-slate-700 hover:bg-slate-600" data-type="longBreak">
+                    <i class="fas fa-plus"></i>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Music and Stats Section -->
+      <div class="space-y-8">
+        <!-- Music Player -->
+        <div class="bg-slate-800 rounded-xl p-6">
+          <div class="flex justify-between items-center mb-4">
+            <h3 class="text-lg font-semibold">Focus Music</h3>
+            <div class="flex items-center space-x-2">
+              <i class="fab fa-spotify text-green-500"></i>
+              <span class="text-sm text-slate-400">Powered by Spotify</span>
+            </div>
+          </div>
+
+          <div class="space-y-3">
+            <div class="music-card relative group rounded-lg overflow-hidden bg-slate-700">
+              <img src="https://pbs.twimg.com/media/Gnm30CfaQAABP8-?format=jpg&name=large" alt="Lofi Beats"
+                class="w-full h-24 object-cover">
+              <div class="p-3">
+                <h4 class="font-medium">Lofi Beats</h4>
+                <p class="text-sm text-slate-400">Chill beats to focus</p>
+              </div>
+              <div
+                class="play-overlay absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 transition">
+                <button
+                  class="play-music bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center">
+                  <i class="fas fa-play"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="music-card relative group rounded-lg overflow-hidden bg-slate-700">
+              <img src="https://pbs.twimg.com/media/GkzNkKHX0AEsO4Z?format=jpg&name=large" alt="Nature Sounds"
+                class="w-full h-24 object-cover">
+              <div class="p-3">
+                <h4 class="font-medium">Nature Sounds</h4>
+                <p class="text-sm text-slate-400">Forest & Rain</p>
+              </div>
+              <div
+                class="play-overlay absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 transition">
+                <button
+                  class="play-music bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center">
+                  <i class="fas fa-play"></i>
+                </button>
+              </div>
+            </div>
+
+            <div class="music-card relative group rounded-lg overflow-hidden bg-slate-700">
+              <img src="https://pbs.twimg.com/media/GYqfCRSaoAAZ2vd?format=jpg&name=900x900" alt="Classical"
+                class="w-full h-24 object-cover">
+              <div class="p-3">
+                <h4 class="font-medium">Classical Focus</h4>
+                <p class="text-sm text-slate-400">Mozart & Beethoven</p>
+              </div>
+              <div
+                class="play-overlay absolute inset-0 bg-black bg-opacity-50 flex items-center justify-center opacity-0 transition">
+                <button
+                  class="play-music bg-green-500 hover:bg-green-600 text-white rounded-full w-12 h-12 flex items-center justify-center">
+                  <i class="fas fa-play"></i>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="bg-slate-800 rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4">Your Stats</h3>
+          <div class="grid grid-cols-2 gap-4">
+            <div class="bg-slate-900 rounded-lg p-4 text-center">
+              <div class="text-3xl font-bold text-indigo-400 mb-1" id="today-sessions">0</div>
+              <div class="text-sm text-slate-400">Today</div>
+            </div>
+            <div class="bg-slate-900 rounded-lg p-4 text-center">
+              <div class="text-3xl font-bold text-indigo-400 mb-1" id="week-sessions">0</div>
+              <div class="text-sm text-slate-400">This Week</div>
+            </div>
+            <div class="bg-slate-900 rounded-lg p-4 text-center">
+              <div class="text-3xl font-bold text-indigo-400 mb-1" id="total-sessions">0</div>
+              <div class="text-sm text-slate-400">Total</div>
+            </div>
+            <div class="bg-slate-900 rounded-lg p-4 text-center">
+              <div class="text-3xl font-bold text-indigo-400 mb-1" id="streak-days">0</div>
+              <div class="text-sm text-slate-400">Day Streak</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Notification Settings -->
+        <div class="bg-slate-800 rounded-xl p-6">
+          <h3 class="text-lg font-semibold mb-4">Notifications</h3>
+          <div class="space-y-3">
+            <label class="flex items-center space-x-3">
+              <input type="checkbox" id="browser-notifications"
+                class="rounded bg-slate-700 border-slate-600 text-indigo-500 focus:ring-indigo-500">
+              <span>Browser Notifications</span>
+            </label>
+            <label class="flex items-center space-x-3">
+              <input type="checkbox" id="sound-notifications"
+                class="rounded bg-slate-700 border-slate-600 text-indigo-500 focus:ring-indigo-500" checked>
+              <span>Sound Alerts</span>
+            </label>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Notification Toast -->
+  <div id="notification-toast"
+    class="fixed bottom-4 right-4 bg-indigo-600 text-white px-6 py-3 rounded-lg shadow-lg transform translate-y-20 transition-transform duration-300 hidden">
+    <div class="flex items-center space-x-3">
+      <i class="fas fa-bell"></i>
+      <span id="notification-message">Timer completed!</span>
+    </div>
+  </div>
+
+  <!-- Audio Elements -->
+  <audio id="timer-end-sound"
+    src="https://assets.mixkit.co/sfx/preview/mixkit-alarm-digital-clock-beep-989.mp3"></audio>
+  <audio id="tick-sound" src="https://assets.mixkit.co/sfx/preview/mixkit-clock-countdown-bleeps-916.mp3" loop></audio>
+
+  <script>
+    // Timer Logic
+    let timer;
+    let timeLeft = 25 * 60; // 25 minutes in seconds
+    let isRunning = false;
+    let isPaused = false;
+    let currentMode = 'focus'; // 'focus', 'shortBreak', 'longBreak'
+    let sessionsCompleted = 0;
+
+    // DOM Elements
+    const timeDisplay = document.getElementById('time-display');
+    const timerState = document.getElementById('timer-state');
+    const startBtn = document.getElementById('start-btn');
+    const pauseBtn = document.getElementById('pause-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const progressCircle = document.getElementById('progress-circle');
+    const notificationToast = document.getElementById('notification-toast');
+    const notificationMessage = document.getElementById('notification-message');
+    const timerEndSound = document.getElementById('timer-end-sound');
+    const tickSound = document.getElementById('tick-sound');
+
+    // Timer settings
+    const focusTimeInput = document.getElementById('focus-time');
+    const shortBreakTimeInput = document.getElementById('short-break-time');
+    const longBreakTimeInput = document.getElementById('long-break-time');
+
+    // Auth elements
+    const loginBtn = document.getElementById('login-btn');
+    const logoutBtn = document.getElementById('logout-btn');
+    const userProfile = document.getElementById('user-profile');
+    const userAvatar = document.getElementById('user-avatar');
+    const userName = document.getElementById('user-name');
+
+    // Stats elements
+    const todaySessions = document.getElementById('today-sessions');
+    const weekSessions = document.getElementById('week-sessions');
+    const totalSessions = document.getElementById('total-sessions');
+    const streakDays = document.getElementById('streak-days');
+
+    // Initialize
+    updateDisplay();
+    loadStats();
+
+    // Event Listeners
+    startBtn.addEventListener('click', startTimer);
+    pauseBtn.addEventListener('click', pauseTimer);
+    resetBtn.addEventListener('click', resetTimer);
+
+    // Timer increment/decrement buttons
+    document.querySelectorAll('.timer-increment').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const type = this.getAttribute('data-type');
+        const input = document.getElementById(`${type}-time`);
+        input.value = parseInt(input.value) + 1;
+        if (!isRunning) resetTimer();
+      });
+    });
+
+    document.querySelectorAll('.timer-decrement').forEach(btn => {
+      btn.addEventListener('click', function () {
+        const type = this.getAttribute('data-type');
+        const input = document.getElementById(`${type}-time`);
+        const minValue = type === 'focus' ? 5 : (type === 'shortBreak' ? 1 : 10);
+        if (parseInt(input.value) > minValue) {
+          input.value = parseInt(input.value) - 1;
+          if (!isRunning) resetTimer();
+        }
+      });
+    });
+
+    // Music player buttons
+    document.querySelectorAll('.play-music').forEach(btn => {
+      btn.addEventListener('click', function () {
+        // In a real app, this would connect to Spotify API
+        showNotification('Now playing: Focus Music');
+      });
+    });
+
+    // Auth simulation
+    loginBtn.addEventListener('click', function () {
+      // Simulate Google auth success
+      const mockUser = {
+        name: "John Doe",
+        email: "john@example.com",
+        image: "https://randomuser.me/api/portraits/men/1.jpg"
+      };
+
+      loginBtn.classList.add('hidden');
+      userProfile.classList.remove('hidden');
+      userAvatar.src = mockUser.image;
+      userName.textContent = mockUser.name;
+
+      // In a real app, this would be handled by NextAuth
+      localStorage.setItem('user', JSON.stringify(mockUser));
+      showNotification('Signed in successfully');
+    });
+
+    logoutBtn.addEventListener('click', function () {
+      // Simulate logout
+      loginBtn.classList.remove('hidden');
+      userProfile.classList.add('hidden');
+
+      // In a real app, this would be handled by NextAuth
+      localStorage.removeItem('user');
+      showNotification('Signed out successfully');
+    });
+
+    // Check if user is "logged in" on page load
+    if (localStorage.getItem('user')) {
+      const user = JSON.parse(localStorage.getItem('user'));
+      loginBtn.classList.add('hidden');
+      userProfile.classList.remove('hidden');
+      userAvatar.src = user.image;
+      userName.textContent = user.name;
+    }
+
+    // Timer Functions
+    function startTimer() {
+      if (!isRunning) {
+        isRunning = true;
+        isPaused = false;
+        startBtn.classList.add('hidden');
+        pauseBtn.classList.remove('hidden');
+
+        timer = setInterval(() => {
+          timeLeft--;
+          updateDisplay();
+
+          // Play tick sound if enabled
+          if (document.getElementById('sound-notifications').checked && !tickSound.playing) {
+            tickSound.play();
+          }
+
+          if (timeLeft <= 0) {
+            timerComplete();
+          }
+        }, 1000);
+
+        timerState.textContent = currentMode === 'focus' ? 'Focusing' : 'On Break';
+      }
+    }
+
+    function pauseTimer() {
+      if (isRunning && !isPaused) {
+        clearInterval(timer);
+        isPaused = true;
+        pauseBtn.innerHTML = '<i class="fas fa-play mr-2"></i> Resume';
+
+        // Pause tick sound
+        tickSound.pause();
+      } else if (isPaused) {
+        startTimer();
+        pauseBtn.innerHTML = '<i class="fas fa-pause mr-2"></i> Pause';
+      }
+    }
+
+    function resetTimer() {
+      clearInterval(timer);
+      isRunning = false;
+      isPaused = false;
+
+      // Reset to current mode's time
+      switch (currentMode) {
+        case 'focus':
+          timeLeft = parseInt(focusTimeInput.value) * 60;
+          break;
+        case 'shortBreak':
+          timeLeft = parseInt(shortBreakTimeInput.value) * 60;
+          break;
+        case 'longBreak':
+          timeLeft = parseInt(longBreakTimeInputInput.value) * 60;
+          break;
+      }
+
+      startBtn.classList.remove('hidden');
+      pauseBtn.classList.add('hidden');
+      timerState.textContent = 'Ready to ' + (currentMode === 'focus' ? 'focus' : 'take a break');
+
+      // Stop sounds
+      tickSound.pause();
+      tickSound.currentTime = 0;
+
+      updateDisplay();
+    }
+
+    function timerComplete() {
+      clearInterval(timer);
+      isRunning = false;
+
+      // Play completion sound if enabled
+      if (document.getElementById('sound-notifications').checked) {
+        timerEndSound.play();
+      }
+
+      // Show notification if enabled
+      if (document.getElementById('browser-notifications').checked) {
+        showNotification('Timer completed! Time for ' +
+          (currentMode === 'focus' ? 'a break' : 'focus'));
+
+        // Browser notification (if permitted)
+        if (Notification.permission === 'granted') {
+          new Notification('FocusFlow', {
+            body: 'Timer completed! Time for ' +
+              (currentMode === 'focus' ? 'a break' : 'focus')
+          });
+        }
+      }
+
+      // Update stats if focus session completed
+      if (currentMode === 'focus') {
+        sessionsCompleted++;
+        updateStats();
+      }
+
+      // Switch mode
+      if (currentMode === 'focus') {
+        sessionsCompleted++;
+        // Every 4 sessions, take a long break
+        if (sessionsCompleted % 4 === 0) {
+          currentMode = 'longBreak';
+          timeLeft = parseInt(longBreakTimeInput.value) * 60;
+        } else {
+          currentMode = 'shortBreak';
+          timeLeft = parseInt(shortBreakTimeInput.value) * 60;
+        }
+      } else {
+        currentMode = 'focus';
+        timeLeft = parseInt(focusTimeInput.value) * 60;
+      }
+
+      startBtn.classList.remove('hidden');
+      pauseBtn.classList.add('hidden');
+      timerState.textContent = 'Timer completed! Ready to ' +
+        (currentMode === 'focus' ? 'focus' : 'take a break');
+
+      updateDisplay();
+    }
+
+    function updateDisplay() {
+      const minutes = Math.floor(timeLeft / 60);
+      const seconds = timeLeft % 60;
+      timeDisplay.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+
+      // Update progress circle
+      const totalTime = currentMode === 'focus' ? parseInt(focusTimeInput.value) * 60 :
+        currentMode === 'shortBreak' ? parseInt(shortBreakTimeInput.value) * 60 :
+          parseInt(longBreakTimeInput.value) * 60;
+      const offset = 283 - (283 * (timeLeft / totalTime));
+      progressCircle.style.strokeDashoffset = offset;
+    }
+
+    function showNotification(message) {
+      notificationMessage.textContent = message;
+      notificationToast.classList.remove('hidden');
+      notificationToast.classList.remove('translate-y-20');
+      notificationToast.classList.add('translate-y-0');
+
+      setTimeout(() => {
+        notificationToast.classList.add('translate-y-20');
+        setTimeout(() => notificationToast.classList.add('hidden'), 300);
+      }, 3000);
+    }
+
+    function loadStats() {
+      // In a real app, this would come from Prisma/backend
+      const stats = JSON.parse(localStorage.getItem('stats')) || {
+        today: 0,
+        week: 0,
+        total: 0,
+        streak: 0
+      };
+
+      todaySessions.textContent = stats.today;
+      weekSessions.textContent = stats.week;
+      totalSessions.textContent = stats.total;
+      streakDays.textContent = stats.streak;
+    }
+
+    function updateStats() {
+      // In a real app, this would update via Prisma/backend
+      const stats = JSON.parse(localStorage.getItem('stats')) || {
+        today: 0,
+        week: 0,
+        total: 0,
+        streak: 0
+      };
+
+      stats.today++;
+      stats.week++;
+      stats.total++;
+
+      // Simple streak logic - in a real app, you'd check dates
+      stats.streak++;
+
+      localStorage.setItem('stats', JSON.stringify(stats));
+      loadStats();
+    }
+
+    // Request notification permission
+    if ('Notification' in window) {
+      Notification.requestPermission();
+    }
+  </script>
+</body>
+
+</html>
